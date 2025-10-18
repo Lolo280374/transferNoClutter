@@ -1,0 +1,32 @@
+{
+  "name": "transfernoclutter",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "transfer easily using NAT packets, no clutter, just CLI shi",
+  "main": "index.js",
+  "bin": {
+    "transfer": "./index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lolo280374/transfernoclutter.git"
+  },
+  "author": "lolodotzip",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Lolo280374/transfernoclutter/issues"
+  },
+  "homepage": "https://github.com/Lolo280374/transfernoclutter#readme",
+  "dependencies": {
+    "blessed": "^0.1.81",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.1",
+    "default-gateway": "^7.2.2",
+    "enquirer": "^2.4.1",
+    "open": "^10.2.0",
+    "ping": "^1.0.0"
+  }
+}
