@@ -54,7 +54,7 @@ async function subnetPing() {
     }
 }
 
-function startTCPServer() {
+function startTCPServer(customPath) {
     const tcpServer = net.createServer((socket) => {
         console.log(``);
         console.log(`connected to: ${socket.remoteAddress}:${socket.remotePort}`);
@@ -78,7 +78,10 @@ function startTCPServer() {
                         startTime = Date.now();
                         lastUpdateTime = startTime;
                         
-                        const downloadDir = path.join(os.homedir(), 'Downloads', 'transferNoClutter');
+                        const downloadDir = customPath
+                            ? path.resolve(customPath)
+                            : process.cwd();
+
                         if (!fs.existsSync(downloadDir)) {
                             fs.mkdirSync(downloadDir, { recursive: true });
                         }
@@ -211,9 +214,10 @@ program
     .command('host')
     .description('start a udp server to allow file receiving on the device')
     .alias('start')
-    .action(async () => {
+    .option('--path <directory>', 'directory where to save the recieved files to')
+    .action(async (options) => {
         await subnetPing();
-        startTCPServer();
+        startTCPServer(options.path);
         const udpServer = dgram.createSocket('udp4');
         udpServer.on('message', (msg, rinfo) => {
             const message = msg.toString().trim();
