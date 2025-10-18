@@ -286,4 +286,16 @@ program
         }
     });
 
+program
+    .command('speed info')
+    .description('small fyi about ethernet technical stuff and their associated speeds')
+    .action(async () => {
+        console.log("\nfyi regarding ethernet technical terms stuff and their speeds (cuz its confusing sometimes)");
+        console.log("slowest to fastest:");
+        console.log("\n* Fast Ethernet (100 Mbps) - this is a lie lol its slow as hell");
+        console.log("* Gigabit Ethernet (1 Gbps) - now this is actually good");
+        console.log("\nafter that, names aren't confusing anymore: 2.5 Gbps > 5 Gbps > 10 Gbps");
+        console.log("and after that theres more but these are more enterprise related");
+    });
+
 program.parse();
