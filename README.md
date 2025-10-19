@@ -102,7 +102,7 @@ transfer help
 ## uninstall
 to uninstall, you can simply run the following:
 ```sh
-npm uninstall transfernoclutter
+npm uninstall -g transfernoclutter
 ```
 
 ## reporting issues
