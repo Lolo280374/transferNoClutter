@@ -104,6 +104,97 @@ async function subnetPing() {
     }
 }
 
+function speedtestServer() {
+    const speedServer = net.createServer((socket) => {
+        const clientIP = socket.remoteAddress;
+        console.log(`\nincoming connection from ${clientIP}:`);
+
+        let bytesTransferred = 0;
+        let testStartTime = Date.now();
+        const testDuration = 10000;
+        let lastUpdateTime = testStartTime;
+
+        const speedtestData = () => {
+            const elapsed = Date.now() - testStartTime;
+            
+            if (elapsed > testDuration) {
+                const downloadAverage = (bytesTransferred / (testDuration / 1000) / 1024 / 1024);
+                console.log(`\n${clientIP} - completed - ${downloadAverage.toFixed(2)}MB/s avg\n`);
+                socket.end();
+            } else {
+                const writeSuccessful = socket.write(Buffer.alloc(256 * 1024));
+                bytesTransferred += 256 * 1024;
+                
+                const currentTime = Date.now();
+                const timeSinceLastUpdate = (currentTime - lastUpdateTime) / 1000;
+                
+                if (timeSinceLastUpdate >= 0.5) {
+                    const elapsed = (currentTime - testStartTime) / 1000;
+                    const speed = formatBytes(bytesTransferred / elapsed);
+                    const progress = ((elapsed / (testDuration / 1000)) * 100).toFixed(0);
+                    process.stdout.write(`\r${clientIP} - ${progress}%, ${speed}/s`);
+                    lastUpdateTime = currentTime;
+                }
+                
+                if (writeSuccessful) {
+                    setImmediate(speedtestData);
+                }
+            }
+        };
+        socket.on('drain', () => {
+            speedtestData();
+        });
+        socket.on('error', (error) => {
+            console.error(`${clientIP} had an error during his speedtest:`, error.message);
+        });
+        speedtestData();
+    });
+    speedServer.listen(speedtest_port, '0.0.0.0', () => {
+        console.log(`\nnow active on port ${speedtest_port} for speedtests.`);
+    });
+}
+
+async function speedtest(hostIP) {
+    return new Promise((resolve, reject) => {
+        const socket = net.createConnection({ host: hostIP, port: speedtest_port }, () => {
+            console.log(`\nconnected! starting the speedtest.`);
+            
+            let bytesReceived = 0;
+            let testStartTime = Date.now();
+            const testDuration = 10000;
+            let lastUpdateTime = testStartTime;
+            socket.on('data', (chunk) => {
+                bytesReceived += chunk.length;
+                
+                const currentTime = Date.now();
+                const elapsedSeconds = (currentTime - testStartTime) / 1000;
+                const timeSinceLastUpdate = (currentTime - lastUpdateTime) / 1000;
+                
+                if (timeSinceLastUpdate >= 0.5) {
+                    const progress = ((elapsedSeconds / (testDuration / 1000)) * 100).toFixed(0);
+                    const speed = formatBytes(bytesReceived / elapsedSeconds);
+                    const timeRemaining = Math.floor((testDuration / 1000) - elapsedSeconds);
+                    process.stdout.write(`\r${progress}% - ${speed}/s - ${timeRemaining} seconds remaining`);
+                    lastUpdateTime = currentTime;
+                }
+            });
+            socket.on('end', () => {
+                const downloadAverage = (bytesReceived / (testDuration / 1000) / 1024 / 1024);
+                console.log(`\ntest complete - average: ${downloadAverage.toFixed(2)} MB/s`);
+                resolve();
+            });
+            socket.on('error', (error) => {
+                console.error(`error while testing the speed:`, error.message);
+                reject(error);
+            });
+        });
+        socket.on('error', (error) => {
+            console.error(`error while connecting to the speedtest server:`, error.message);
+            reject(error);
+        });
+    });
+}
+
 function startTCPServer(customPath) {
     const tcpServer = net.createServer((socket) => {
         console.log(``);
@@ -515,6 +606,25 @@ program
             await sendFile(resolvedIP, filePath, options.rename);
         } catch (error) {
             console.error(`an error occured while sending:`, error.message);
+        }
+    });
+
+speed
+    .command('host')
+    .description('start a speedtest server to test your max LAN speed,')
+    .action(() => {
+        speedtestServer();
+    });
+
+speed
+    .command('test <IP/ID/hostname>')
+    .description('runs a 10 second test on the speedtest server, testing the max LAN speed,')
+    .action(async (target) => {
+        try {
+            const resolvedIP = await resolveHost(target);
+            await speedtest(resolvedIP);
+        } catch (error) {
+            console.error(`an error occured while running the speedtest:`, error.message);
         }
     });
 

@@ -2,7 +2,7 @@
   "name": "transfernoclutter",
   "type": "module",
   "version": "1.0.0",
-  "description": "transfer easily using NAT packets, no clutter, just CLI shi",
+  "description": "transfer files (even massives one) fully on your LAN, using a fully headless CLI tool!",
   "main": "index.js",
   "bin": {
     "transfer": "./index.js"
