@@ -9,6 +9,7 @@ import os from 'os';
 import { gateway4sync } from 'default-gateway';
 import ping from 'ping';
 import crypto from 'crypto';
+import dns from 'dns';
 
 const program = new Command();
 const discover_port = 6767;
@@ -39,6 +40,34 @@ function getLocalIP() {
         }
     }
     return 'unknown';
+}
+
+async function resolveHost(input) {
+    if (input.includes('.')) {
+        return input;
+    }
+
+    if (/^\d+$/.test(input)) {
+        try {
+            const { gateway } = await gateway4sync();
+            if (gateway) {
+                const subnet = gateway.split('.').slice(0, 3).join('.');
+                return `${subnet}.${input}`;
+            }
+        } catch (error) {
+            console.error(`couldn't get your router's subnet:`, error.message);
+        }
+    }
+
+    return new Promise((resolve, reject) => {
+        dns.lookup(input, (err, address) => {
+            if (err) {
+                reject(new Error(`unable to resolve "${input}": ${err.message}`));
+            } else {
+                resolve(address);
+            }
+        });
+    });
 }
 
 function formatBytes(bytes) {
@@ -388,7 +417,7 @@ async function sendFile(hostIP, filePath, rename) {
 
 program
     .command('host')
-    .description('start a udp server to allow file receiving on the device')
+    .description('start a share server to allow recieving files on the device,')
     .alias('start')
     .option('--path <directory>', 'directory where to save the recieved files to')
     .action(async (options) => {
@@ -423,7 +452,7 @@ program
 
 program
     .command('discover')
-    .description('lists the devices currently hosting a share session on your LAN')
+    .description('lists the devices currently hosting a share session on your LAN,')
     .alias('find')
     .action(async () => {
         const socket = dgram.createSocket('udp4');
@@ -457,13 +486,14 @@ program
     });
 
 program
-    .command('send <hostIP> <filePath>')
-    .description('send a file to a host on your LAN')
+    .command('send <IP/ID/hostname> <filePath>')
+    .description(`send a file to a host on your LAN. you may use the IP, hostname, or the last byte of the IP (e.g '31' for '192.168.1.31'),`)
     .option('--rename <newName>', 'override the original file name for the recieving host')
     .action(async (hostIP, filePath, options) => {
         try {
-            console.log(`\nconnecting to ${hostIP}...`);
-            await sendFile(hostIP, filePath, options.rename);
+            const resolvedIP = await resolveHost(hostIP);
+            console.log(`\nconnecting to resolved host ${resolvedIP}...`);
+            await sendFile(resolvedIP, filePath, options.rename);
         } catch (error) {
             console.error(`an error occured while sending:`, error.message);
         }
@@ -471,7 +501,7 @@ program
 
 program
     .command('speed info')
-    .description('small fyi about ethernet technical stuff and their associated speeds')
+    .description('small fyi about ethernet technical stuff and their associated speeds,')
     .action(async () => {
         console.log("\nfyi regarding ethernet technical terms stuff and their speeds (cuz its confusing sometimes)");
         console.log("slowest to fastest:");
