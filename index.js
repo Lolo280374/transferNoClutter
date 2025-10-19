@@ -65,6 +65,7 @@ function startTCPServer(customPath) {
         let startTime = 0;
         let lastUpdateTime = 0;
         let lastBytesCount = 0;
+        let filePath = '';
 
         socket.on('data', (chunk) => {
             if (!fileStream) {
@@ -85,7 +86,7 @@ function startTCPServer(customPath) {
                         if (!fs.existsSync(downloadDir)) {
                             fs.mkdirSync(downloadDir, { recursive: true });
                         }
-                        const filePath = path.join(downloadDir, fileName);
+                        filePath = path.join(downloadDir, fileName);
                         fileStream = fs.createWriteStream(filePath);
                         console.log(`recieving: "${fileName}" (${formatBytes(fileSize)});`);
                         
@@ -130,6 +131,7 @@ function startTCPServer(customPath) {
                 const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
                 console.log(``);
                 console.log(`\nrecieved "${fileName}" in ${totalTime} seconds!`);
+                console.log(`file saved to "${filePath}"`);
             }
             socket.destroy();
         });
@@ -145,12 +147,18 @@ function startTCPServer(customPath) {
     return tcpServer;
 }
 
-async function sendFile(hostIP, filePath) {
+async function sendFile(hostIP, filePath, rename) {
     return new Promise((resolve, reject) => {
         if (!fs.existsSync(filePath)) {
             return reject(new Error(`file not found: ${filePath}`));
         }
-        const fileName = path.basename(filePath);
+
+        let fileName = path.basename(filePath);
+        if (rename) {
+            const extension = path.extname(fileName);
+            fileName = rename + extension;
+        }
+
         const fileSize = fs.statSync(filePath).size;
         const socket = net.createConnection({ host: hostIP, port: transfer_port }, () => {
             const metadata = { fileName, fileSize };
@@ -281,10 +289,11 @@ program
 program
     .command('send <hostIP> <filePath>')
     .description('send a file to a host on your LAN')
-    .action(async (hostIP, filePath) => {
+    .option('--rename <newName>', 'override the original file name for the recieving host')
+    .action(async (hostIP, filePath, options) => {
         try {
             console.log(`\nconnecting to ${hostIP}...`);
-            await sendFile(hostIP, filePath);
+            await sendFile(hostIP, filePath, options.rename);
         } catch (error) {
             console.error(`error connecting to the host:`, error.message);
         }
