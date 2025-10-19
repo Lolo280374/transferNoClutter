@@ -293,8 +293,12 @@ async function sendFile(hostIP, filePath, rename) {
             console.log(`sending: "${fileName}" (${formatBytes(fileSize)});`);
 
             fileStream.on('data', (chunk) => {
-                socket.write(chunk);
+                const sync = socket.write(chunk);
                 bytesSent += chunk.length;
+
+                if (!sync) {
+                    fileStream.pause();
+                }
                 
                 const currentTime = Date.now();
                 const elapsedSeconds = (currentTime - startTime) / 1000;
@@ -316,6 +320,11 @@ async function sendFile(hostIP, filePath, rename) {
                     lastBytesCount = bytesSent;
                 }
             });
+
+            socket.on('drain', () => {
+                fileStream.resume();
+            });
+
             fileStream.on('end', () => {
                 const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
                 const avgSpeed = formatBytes(bytesSent / (Date.now() - startTime) * 1000);
