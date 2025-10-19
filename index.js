@@ -12,8 +12,10 @@ import crypto from 'crypto';
 import dns from 'dns';
 
 const program = new Command();
+const speed = program.command("speed").description("test and get information about LAN speeds,");
 const discover_port = 6767;
 const transfer_port = 6969;
+const speedtest_port = 4141;
 
 function getChecksum(filePath) {
     return new Promise((resolve, reject) => {
@@ -516,8 +518,8 @@ program
         }
     });
 
-program
-    .command('speed info')
+speed
+    .command('info')
     .description('small fyi about ethernet technical stuff and their associated speeds,')
     .action(async () => {
         console.log("\nfyi regarding ethernet technical terms stuff and their speeds (cuz its confusing sometimes)");
